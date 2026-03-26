@@ -1,9 +1,16 @@
 import { GoogleGenAI } from "@google/genai";
 
 // Use the platform provided API key
-const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+function getGenAI() {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error("GEMINI_API_KEY is not set. Please check your environment variables.");
+  }
+  return new GoogleGenAI({ apiKey });
+}
 
 export async function generateAnimeImage(characterName: string, animeSource: string) {
+  const genAI = getGenAI();
   const model = genAI.models.generateContent({
     model: "gemini-2.5-flash-image",
     contents: {
@@ -35,6 +42,7 @@ export async function generateAnimeImage(characterName: string, animeSource: str
 }
 
 export async function generateCardStats(characterName: string, animeSource: string) {
+  const genAI = getGenAI();
   const model = genAI.models.generateContent({
     model: "gemini-3-flash-preview",
     contents: `Analyze the lore and canonical strength of ${characterName} from ${animeSource}. 
