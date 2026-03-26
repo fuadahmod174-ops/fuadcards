@@ -5,13 +5,15 @@
       "description": "User profile and generation stats",
       "type": "object",
       "properties": {
+        "uid": { "type": "string" },
         "displayName": { "type": "string" },
+        "email": { "type": "string" },
         "photoURL": { "type": "string" },
         "lastGenerated": { "type": "string", "format": "date-time" },
         "cardsToday": { "type": "integer" },
         "totalPower": { "type": "integer" }
       },
-      "required": ["displayName", "totalPower"]
+      "required": ["uid", "displayName", "email", "totalPower", "cardsToday"]
     },
     "Card": {
       "title": "Card",
