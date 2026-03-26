@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /card/
+Allow: /
+Disallow: /admin/
+
+Sitemap: https://fuadcards.com/sitemap.xml

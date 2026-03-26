@@ -1,0 +1,64 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and generation stats",
+      "type": "object",
+      "properties": {
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "lastGenerated": { "type": "string", "format": "date-time" },
+        "cardsToday": { "type": "integer" },
+        "totalPower": { "type": "integer" }
+      },
+      "required": ["displayName", "totalPower"]
+    },
+    "Card": {
+      "title": "Card",
+      "description": "Generated anime trading card",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string" },
+        "cardId": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "characterName": { "type": "string" },
+        "animeSource": { "type": "string" },
+        "raw_power": { "type": "integer" },
+        "strength": { "type": "integer" },
+        "status": { "type": "string", "enum": ["saved", "ordered"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerId", "cardId", "imageUrl"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Physical card order",
+      "type": "object",
+      "properties": {
+        "cardId": { "type": "string" },
+        "userId": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "userName": { "type": "string" },
+        "characterName": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "shipped", "delivered"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["cardId", "userId", "imageUrl"]
+    }
+  },
+  "firestore": {
+    "/players/{userId}": {
+      "schema": "User",
+      "description": "User profile data"
+    },
+    "/cards/{cardDocId}": {
+      "schema": "Card",
+      "description": "Collection of all generated cards"
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Physical card orders"
+    }
+  }
+}
