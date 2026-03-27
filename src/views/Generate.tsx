@@ -61,7 +61,6 @@ export const GenerateView: React.FC = () => {
   const { user, player, login, refreshPlayer } = useAuth();
   const { t } = useLanguage();
   
-  // Persistent state (The "Brain")
   const [character, setCharacter] = useState(() => localStorage.getItem('fc_gen_character') || '');
   const [anime, setAnime] = useState(() => localStorage.getItem('fc_gen_anime') || '');
   const [statsDraft, setStatsDraft] = useState<any>(() => {
@@ -76,10 +75,8 @@ export const GenerateView: React.FC = () => {
   const [cooldown, setCooldown] = useState<number | null>(null);
   
   const [tempData, setTempData] = useState<any>(null);
-  const [sessionHistory, setSessionHistory] = useState<any[]>([]);
   const [forgeGallery, setForgeGallery] = useState<any[]>([]);
 
-  // Save to "Brain" (localStorage)
   useEffect(() => {
     localStorage.setItem('fc_gen_character', character);
     localStorage.setItem('fc_gen_anime', anime);
@@ -192,15 +189,14 @@ export const GenerateView: React.FC = () => {
 
       setGeneratedCard(finalCardUrl);
       setGeneratedCardUrl(r2Url);
-      const newCard = {
+      setTempData({
         cardId,
         character,
         anime,
         stats: statsDraft,
         imageUrl: r2Url,
         status: 'forge'
-      };
-      setTempData(newCard);
+      });
       setStatus("");
     } catch (error) {
       console.error(error);
@@ -217,15 +213,16 @@ export const GenerateView: React.FC = () => {
     setLoading(true);
     setStatus("Saving to account...");
     try {
-      await updateDoc(doc(db, 'cards', data.cardId || data.id), {
+      const targetId = data.cardId || data.id;
+      await updateDoc(doc(db, 'cards', targetId), {
         status: "saved",
-        expiresAt: null // Remove expiration
+        expiresAt: null
       });
 
       await setDoc(doc(db, 'players', user.uid), {
         lastGenerated: serverTimestamp(),
         cardsToday: (player?.cardsToday || 0) + 1,
-        totalPower: (player?.totalPower || 0) + (data.stats?.power || data.raw_power)
+        totalPower: (player?.totalPower || 0) + (data.stats?.power || data.raw_power || 0)
       }, { merge: true });
 
       await refreshPlayer();
@@ -234,6 +231,7 @@ export const GenerateView: React.FC = () => {
       if (!cardToSave) {
         setStatsDraft(null);
         setGeneratedCard(null);
+        setGeneratedCardUrl(null);
         setTempData(null);
         setCharacter('');
         setAnime('');
@@ -263,35 +261,26 @@ export const GenerateView: React.FC = () => {
 
     canvas.width = 800;
     canvas.height = 1200;
-
-    // 0. Clear Canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // 1. Layer 1 (Background): Gemini-generated character image (Full-bleed)
     const img = new Image();
     img.crossOrigin = "anonymous";
     img.src = bgImage;
     await new Promise(r => img.onload = r);
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-    // 2. Layer 2 (The "Real Card" Template): Transparent "frame" overlay
     const frameWidth = 25;
     const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-    gradient.addColorStop(0, '#bf953f'); // Gold
-    gradient.addColorStop(0.25, '#fcf6ba'); // Light Gold
-    gradient.addColorStop(0.5, '#b38728'); // Dark Gold
-    gradient.addColorStop(0.75, '#fbf5b7'); // Light Gold
-    gradient.addColorStop(1, '#aa771c'); // Gold
+    gradient.addColorStop(0, '#bf953f'); 
+    gradient.addColorStop(0.25, '#fcf6ba'); 
+    gradient.addColorStop(0.5, '#b38728'); 
+    gradient.addColorStop(0.75, '#fbf5b7'); 
+    gradient.addColorStop(1, '#aa771c'); 
     
     ctx.strokeStyle = gradient;
     ctx.lineWidth = frameWidth;
     ctx.strokeRect(frameWidth / 2, frameWidth / 2, canvas.width - frameWidth, canvas.height - frameWidth);
     
-    ctx.strokeStyle = 'rgba(0,0,0,0.3)';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(frameWidth + 2, frameWidth + 2, canvas.width - (frameWidth * 2) - 4, canvas.height - (frameWidth * 2) - 4);
-
-    // 3. Layer 3 (Text Integration): Character Name, PWR, and STR stats
     ctx.textAlign = 'left';
     ctx.textBaseline = 'bottom';
     
@@ -311,9 +300,8 @@ export const GenerateView: React.FC = () => {
     ctx.strokeText(`STR: ${stats.strength}`, 350, canvas.height - 100);
     ctx.fillText(`STR: ${stats.strength}`, 350, canvas.height - 100);
 
-    // 4. Layer 4 (Single QR): Bottom-right corner (60x60px)
     const qrUrl = `${window.location.origin}/card/${cardId}`;
-    const qrDataUrl = await QRCode.toDataURL(qrUrl, { margin: 1, width: 120, color: { dark: '#000000', light: '#ffffff' } });
+    const qrDataUrl = await QRCode.toDataURL(qrUrl, { margin: 1, width: 120 });
     const qrImg = new Image();
     qrImg.src = qrDataUrl;
     await new Promise(r => qrImg.onload = r);
@@ -342,10 +330,8 @@ export const GenerateView: React.FC = () => {
                   setAnime('');
                   setStatsDraft(null);
                   setGeneratedCard(null);
-                  localStorage.removeItem('fc_gen_character');
-                  localStorage.removeItem('fc_gen_anime');
-                  localStorage.removeItem('fc_gen_stats');
-                  localStorage.removeItem('fc_gen_card');
+                  setGeneratedCardUrl(null);
+                  localStorage.clear();
                 }}
                 className="text-xs text-zinc-500 hover:text-red-500 transition-colors"
               >
@@ -430,7 +416,7 @@ export const GenerateView: React.FC = () => {
               </div>
             ) : (
               <button
-                onClick={handleSaveToAccount}
+                onClick={() => handleSaveToAccount()}
                 disabled={loading}
                 className="w-full rounded-lg bg-emerald-500 py-4 font-bold text-black transition-all hover:scale-[1.02] disabled:opacity-50"
               >
@@ -458,6 +444,12 @@ export const GenerateView: React.FC = () => {
                   alt="Generated Card" 
                   className="h-full w-full object-cover" 
                   referrerPolicy="no-referrer"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    if (generatedCardUrl && target.src !== generatedCardUrl) {
+                      target.src = generatedCardUrl;
+                    }
+                  }}
                 />
                 <div className="absolute top-4 right-4 rounded-full bg-black/50 px-3 py-1 text-xs font-bold text-white backdrop-blur-md">
                   {t('temporary')}
@@ -474,6 +466,7 @@ export const GenerateView: React.FC = () => {
           </AnimatePresence>
         </div>
       </div>
+
       <div className="mt-20">
         <div className="mb-8 flex items-center justify-between">
           <h2 className="text-2xl font-bold text-white flex items-center gap-2">
@@ -493,14 +486,20 @@ export const GenerateView: React.FC = () => {
               className="group relative overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4"
             >
               <div className="relative aspect-[2.5/3.5] overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950">
-                <img src={card.imageUrl} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+                <img 
+                  src={card.imageUrl} 
+                  alt={card.characterName} 
+                  className="h-full w-full object-cover" 
+                  referrerPolicy="no-referrer"
+                  onError={(e) => console.error("Gallery image failed:", card.imageUrl)}
+                />
                 <div className="absolute top-2 right-2 flex flex-col gap-2">
                   <span className="rounded-full bg-emerald-500/20 px-2 py-1 text-[10px] font-bold text-emerald-500 backdrop-blur-md">
                     {t('forge')}
                   </span>
                   {card.expiresAt && (
                     <span className="rounded-full bg-red-500/20 px-2 py-1 text-[10px] font-bold text-red-500 backdrop-blur-md">
-                      {t('expiresIn').replace('{count}', differenceInHours(card.expiresAt.toDate(), new Date()).toString())}
+                      {t('expiresIn').replace('{count}', Math.max(0, differenceInHours(card.expiresAt.toDate(), new Date())).toString())}h
                     </span>
                   )}
                 </div>
